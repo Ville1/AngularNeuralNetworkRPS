@@ -79,3 +79,7 @@ body {
     border-style: dotted;
     border-width: 1px;
 }
+
+.disabledField {
+    background-color: gray;
+}
