@@ -1,0 +1,53 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div ng-controller="AuthenticationController as authentication">
+    <div class="row">
+        <div class="col-sm-12 col-md-8 col-lg-5">
+            <input type="hidden" id="restUrl" ng-init="authentication.url = '@(AngularNeuralNetworkFront.Utils.Settings.RestUrl)';" />
+            <div class="mb-3 row">
+                <label for="username" class="col-sm-2 col-form-label">Username</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="username" ng-model="authentication.username">
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label for="password" class="col-sm-2 col-form-label">Password</label>
+                <div class="col-sm-10">
+                    <input type="password" class="form-control" id="password" ng-model="authentication.password">
+                </div>
+            </div>
+            <div class="row">
+                <button type="button" class="btn btn-primary" ng-click="authentication.logIn()">Log in</button>
+                <img ng-if="authentication.success === true" ng-src="/images/check_mark.png" width="35" height="35" />
+                <img ng-if="authentication.success === false" ng-src="/images/cross.png" width="35" height="35" />
+            </div>
+        </div>
+    </div>
+
+    <div class="row" ng-if="authentication.success === true">
+        <div ng-controller="GameController as game">
+            <div class="row field-wrapper">
+                <div class="col-sm-10 col-md-10 col-lg-10 field">
+                    <div class="row">
+                        <div class="col">
+                            <img src="/images/rock.png" width="50" height="50" ng-click="game.rock()" />
+                        </div>
+                        <div class="col">
+                            <img src="/images/paper.png" width="50" height="50" ng-click="game.paper()" />
+                        </div>
+                        <div class="col">
+                            <img src="/images/scissors.png" width="50" height="50" ng-click="game.scissors()" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-2 col-md-2 col-lg-2 field">
+                    <img src="/images/question_mark.png" width="50" height="50" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
