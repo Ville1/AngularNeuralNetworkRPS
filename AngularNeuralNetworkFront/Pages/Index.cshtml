@@ -51,6 +51,38 @@
                     <img ng-if="game.move === 's'" ng-src="/images/scissors.png" width="50" height="50" />
                 </div>
             </div>
+            <div class="row">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th>AI Win Rate</th>
+                            <td><span ng-bind="game.aiWinRate"></span>%</td>
+                        </tr>
+                        <tr>
+                            <th>AI Wins</th>
+                            <td><span ng-bind="game.aiWins"></span></td>
+                        </tr>
+                        <tr>
+                            <th>AI Losses</th>
+                            <td><span ng-bind="game.aiLosses"></span></td>
+                        </tr>
+                        <tr>
+                            <th>AI Draws</th>
+                            <td><span ng-bind="game.draws"></span></td>
+                        </tr>
+                        <tr>
+                            <th>Total Games</th>
+                            <td><span ng-bind="game.totalGames"></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="row">
+                <button type="button" class="btn btn-primary" ng-click="game.resetStatistics()">Reset Statistics</button>
+            </div>
+            <div class="row">
+                <button type="button" class="btn btn-warning" ng-click="game.resetAI()">Reset AI</button>
+            </div>
         </div>
     </div>
 </div>

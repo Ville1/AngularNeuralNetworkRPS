@@ -12,10 +12,10 @@ var networkConfig = {
     Name: 'AngularRockPaperScissors',
     HiddenWidth: ((historyPlayerLength * 2) + (historyAILength * 2)) + 5,
     InputCount: (historyPlayerLength * 2) + (historyAILength * 2),
-    Layers: 3,
-    LearningRate: 1,
+    Layers: 5,
+    LearningRate: 1.5,
     OutputCount: 2,
-    TeachRepeats: 10000
+    TeachRepeats: 3000
 };
 
 var username = null;
@@ -84,8 +84,10 @@ angular.module('NNFront', [])
     .controller('GameController', function ($scope, $http) {
         var game = this;
 
+        //AI move
         game.move = undefined;
 
+        //Move history
         var historyPlayer = [];
         for (var i = 0; i < historyPlayerLength; i++) {
             historyPlayer.push(bits.undefined);
@@ -94,9 +96,19 @@ angular.module('NNFront', [])
         for (var i = 0; i < historyAILength; i++) {
             historyAI.push(bits.undefined);
         }
+
+        //Statistics
+        game.aiWins = 0;
+        game.aiLosses = 0;
+        game.draws = 0;
+        game.totalGames = 0;
+        game.aiWinRate = 0.0;
+
+        //Waiting for API response?
         var processing = false;
         $scope.disableField = false;
 
+        //Rock-> paper, paper -> scissors, scissors -> rock
         var counter = function (bitsP) {
             switch (bitsP) {
                 case bits.rock:
@@ -110,6 +122,7 @@ angular.module('NNFront', [])
             };
         };
 
+        //Call api for AI move
         var play = function (bitsP) {
             if (processing) {
                 return;
@@ -137,41 +150,64 @@ angular.module('NNFront', [])
                 }
             }).then(
                 function (processResponse) {
-                    $http.post(url + '/network/teachsimple', {
-                        NetworkId: networkId,
-                        Input: input,
-                        ExpectedOutput: counter(bitsP),
-                        TeachRepeats: networkConfig.TeachRepeats
-                    }, {
-                        headers: {
-                            'Authorization': 'Basic ' + btoa(username + ':' + password)
-                        }
-                    }).then(
-                        function (teachResponse) {
-                            switch (processResponse.data.output) {
-                                case bits.paper:
-                                    game.move = 'p';
-                                    break;
-                                case bits.scissors:
-                                    game.move = 's';
-                                    break;
-                                default:
-                                    game.move = 'r';
-                                    break;
+                    switch (processResponse.data.output) {
+                        case bits.paper:
+                            game.move = 'p';
+                            break;
+                        case bits.scissors:
+                            game.move = 's';
+                            break;
+                        default:
+                            game.move = 'r';
+                            processResponse.data.output = bits.rock;//If response = bits.undefined, treat it as rock
+                            break;
+                    }
+
+                    //Update statistics
+                    var win = false;
+                    if (processResponse.data.output == bitsP) {
+                        game.draws++;
+                    } else if (processResponse.data.output == counter(bitsP)) {
+                        game.aiWins++;
+                        win = true;
+                    } else {
+                        game.aiLosses++;
+                    }
+                    game.totalGames++;
+                    game.aiWinRate = Math.round(((game.aiWins + (0.5 * game.draws)) / game.totalGames) * 100);
+
+                    if (!win) {
+                        //AI didn't win -> teach it to play better
+                        $http.post(url + '/network/teachsimple', {
+                            NetworkId: networkId,
+                            Input: input,
+                            ExpectedOutput: counter(bitsP),
+                            TeachRepeats: networkConfig.TeachRepeats
+                        }, {
+                            headers: {
+                                'Authorization': 'Basic ' + btoa(username + ':' + password)
                             }
-                            processing = false;
-                            $scope.disableField = false;
-                        },
-                        function (response) {
-                            //Error
-                            game.move = undefined;
-                            historyAI.push(bits.undefined);
-                            historyAI.shift();
-                            console.log(response);
-                            processing = false;
-                            $scope.disableField = false;
-                        }
-                    );
+                        }).then(
+                            function (teachResponse) {
+                                //API response processed -> enable GUI
+                                processing = false;
+                                $scope.disableField = false;
+                            },
+                            function (response) {
+                                //Error
+                                game.move = undefined;
+                                historyAI.push(bits.undefined);
+                                historyAI.shift();
+                                console.log(response);
+                                processing = false;
+                                $scope.disableField = false;
+                            }
+                        );
+                    } else {
+                        //API response processed -> enable GUI
+                        processing = false;
+                        $scope.disableField = false;
+                    }
                 },
                 function (response) {
                     //Error
@@ -185,15 +221,57 @@ angular.module('NNFront', [])
             );
         };
 
+        //On click listeners
         game.rock = function () {
             play(bits.rock);
         };
-
         game.paper = function () {
             play(bits.paper);
         };
-
         game.scissors = function () {
             play(bits.scissors);
+        };
+
+        game.resetStatistics = function () {
+            game.aiWins = 0;
+            game.aiLosses = 0;
+            game.draws = 0;
+            game.totalGames = 0;
+            game.aiWinRate = 0.0;
+        };
+
+        game.resetAI = function () {
+            //Delete current network
+            $http.post(url + '/network/delete', {
+                Id: networkId
+            }, {
+                headers: {
+                    'Authorization': 'Basic ' + btoa(username + ':' + password)
+                }
+            }).then(
+                function (deleteResponse) {
+                    console.log('Network deleted');
+                    //Create a fresh network
+                    $http.post(url + '/network/create', networkConfig, {
+                        headers: {
+                            'Authorization': 'Basic ' + btoa(username + ':' + password)
+                        }
+                    }).then(
+                        function (response) {
+                            //Network created
+                            networkId = response.data.network.id;
+                            console.log('Network created: #' + networkId);
+                        },
+                        function (response) {
+                            //Error
+                            console.log(response);
+                        }
+                    );
+                },
+                function (response) {
+                    //Error
+                    console.log(response);
+                }
+            );
         };
     });
